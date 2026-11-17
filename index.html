@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f7f4">
+  <title>Kalkulator Subnet &amp; VLSM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Lora:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f5f6f4;
+      --surface: #ffffff;
+      --ink: #202c29;
+      --muted: #68736f;
+      --line: #d8ded9;
+      --green: #285d4f;
+      --green-pale: #edf2ef;
+      --blue: #356b78;
+      --blue-pale: #edf3f4;
+      --orange: #a85e3f;
+      --danger: #a7443e;
+      --danger-pale: #f8efed;
+      --mono: "IBM Plex Mono", Consolas, monospace;
+      --sans: "Source Sans 3", "Segoe UI", sans-serif;
+      --serif: "Lora", Georgia, serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image: none;
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .shell { width: min(100% - 40px, 920px); margin: 0 auto; padding: 30px 0 56px; }
+    .masthead { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 700; }
+    .brand-mark { display: grid; width: 34px; aspect-ratio: 1; place-items: center; border-radius: 3px; color: white; background: var(--green); font: 500 13px var(--mono); }
+    .class-tag { color: var(--muted); font: 12px var(--mono); }
+    main { padding-top: 34px; }
+    .intro { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-bottom: 24px; }
+    .eyebrow { margin: 0 0 9px; color: var(--orange); font: 500 12px var(--mono); text-transform: uppercase; }
+    h1 { margin: 0; font: 600 34px/1.2 var(--serif); }
+    .intro p:last-child { max-width: 380px; margin: 10px 0 0; color: var(--muted); }
+    .version-mark { flex: 0 0 auto; padding: 6px 0 6px 12px; border-left: 1px solid var(--line); color: var(--muted); font: 11px var(--mono); }
+
+    .workspace { overflow: hidden; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); box-shadow: 0 2px 8px rgba(32, 44, 41, .035); }
+    .tabbar { display: flex; gap: 22px; padding: 0 24px; border-bottom: 1px solid var(--line); background: #fff; }
+    .tab { position: relative; padding: 14px 2px 12px; border: 0; color: var(--muted); background: transparent; font-size: 14px; font-weight: 600; }
+    .tab[aria-selected="true"] { color: var(--green); }
+    .tab[aria-selected="true"]::after { position: absolute; right: 0; bottom: -1px; left: 0; height: 2px; background: var(--green); content: ""; }
+    .panel { padding: 28px 24px 30px; }
+    .panel[hidden] { display: none; }
+    .panel-heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 22px; }
+    h2 { margin: 0; font: 600 20px/1.3 var(--serif); }
+    .panel-heading p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .method { color: var(--muted); font: 11px var(--mono); }
+    .form-grid { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 16px; max-width: 650px; }
+    .field { display: flex; flex-direction: column; gap: 7px; }
+    label, .field-label { font-size: 13px; font-weight: 600; }
+    input { width: 100%; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid #cbd3ce; border-radius: 3px; outline: none; color: var(--ink); background: white; }
+    input:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(53, 107, 120, .12); }
+    input::placeholder { color: #9aa8a0; }
+    .hint { margin: 0; color: var(--muted); font-size: 12px; }
+    .actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+    .primary { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; gap: 9px; padding: 0 16px; border: 1px solid var(--green); border-radius: 3px; color: #fff; background: var(--green); font-weight: 600; transition: background .16s ease; }
+    .primary:hover { background: #1d493d; }
+    .primary:focus-visible, .tab:focus-visible, .text-button:focus-visible, .remove-button:focus-visible { outline: 2px solid rgba(53, 107, 120, .5); outline-offset: 2px; }
+    .button-icon { font: 500 17px var(--mono); line-height: 1; }
+    .text-button { padding: 7px 0; border: 0; color: var(--blue); background: transparent; font-size: 13px; font-weight: 600; }
+    .text-button:hover { text-decoration: underline; }
+    .error { margin: 14px 0 0; padding: 10px 12px; border-left: 2px solid var(--danger); color: #842d2d; background: var(--danger-pale); font-size: 13px; }
+    .error[hidden] { display: none; }
+    .result { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--line); animation: reveal .24s ease both; }
+    .result[hidden] { display: none; }
+    .result-title { display: flex; align-items: center; gap: 9px; margin: 0 0 15px; font: 600 17px var(--serif); }
+    .result-title::before { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); content: ""; }
+    .result-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+    .result-item { min-height: 78px; padding: 13px 15px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .result-item dt { margin-bottom: 7px; color: var(--muted); font-size: 12px; }
+    .result-item dd { margin: 0; overflow-wrap: anywhere; font: 500 14px var(--mono); }
+    .result-item.emphasis { background: var(--blue-pale); }
+
+    .vlsm-form { max-width: 720px; }
+    .requirements-heading { margin-top: 22px; }
+    .requirements { display: grid; gap: 10px; margin-top: 18px; }
+    .requirement { display: grid; grid-template-columns: minmax(0, 1fr) 80px; align-items: end; gap: 12px; }
+    .requirement input { font-family: var(--mono); }
+    .remove-button { min-height: 42px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); background: white; font-size: 12px; }
+    .remove-button:hover:not(:disabled) { border-color: #e7b5a8; color: var(--danger); background: var(--danger-pale); }
+    .remove-button:disabled { cursor: not-allowed; opacity: .48; }
+    .add-requirement { margin-top: 8px; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 11px 13px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    th { color: var(--muted); background: #f7f9f7; font-size: 11px; font-weight: 600; }
+    td { font-size: 13px; }
+    td.mono { font-family: var(--mono); }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:nth-child(even) { background: #fbfcfb; }
+    .footnote { display: flex; justify-content: space-between; gap: 16px; margin-top: 14px; color: var(--muted); font-size: 12px; }
+
+    @keyframes reveal { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 640px) {
+      .shell { width: min(100% - 24px, 920px); padding-top: 18px; }
+      .class-tag { display: none; }
+      main { padding-top: 26px; }
+      .intro { align-items: start; margin-bottom: 20px; }
+      .intro p:last-child { font-size: 14px; }
+      .version-mark { display: none; }
+      .panel { padding: 22px 16px 24px; }
+      .tabbar { padding: 0 16px; }
+      h1 { font-size: 28px; }
+      .form-grid { grid-template-columns: minmax(0, 1fr) 112px; gap: 11px; }
+      .result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .result-item { padding: 11px; }
+      .result-item dd { font-size: 12px; }
+      .panel-heading { margin-bottom: 18px; }
+      .method { display: none; }
+      .footnote { flex-direction: column; gap: 3px; }
+    }
+    @media (max-width: 380px) {
+      .form-grid { grid-template-columns: minmax(0, 1fr) 96px; }
+      .tab { padding-inline: 11px; }
+      .requirement { grid-template-columns: minmax(0, 1fr) 70px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="masthead">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">IP</span><span>LAB JARINGAN</span></div>
+      <span class="class-tag">IPv4 / NETWORK TOOLS</span>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Praktikum alamat jaringan</p>
+          <h1 id="page-title">Kalkulator Subnet &amp; VLSM</h1>
+          <p>Hitung batas subnet IPv4 dan susun kebutuhan host dengan alokasi yang efisien.</p>
+        </div>
+        <span class="version-mark">IPv4 · 32 BIT</span>
+      </section>
+
+      <section class="workspace" aria-label="Kalkulator jaringan">
+        <div class="tabbar" role="tablist" aria-label="Mode kalkulator">
+          <button class="tab" id="tab-subnet" type="button" role="tab" aria-selected="true" aria-controls="panel-subnet">Subnet</button>
+          <button class="tab" id="tab-vlsm" type="button" role="tab" aria-selected="false" aria-controls="panel-vlsm" tabindex="-1">VLSM</button>
+        </div>
+
+        <section class="panel" id="panel-subnet" role="tabpanel" aria-labelledby="tab-subnet">
+          <div class="panel-heading">
+            <div><h2>Hitung satu subnet</h2><p>Masukkan alamat IPv4 dan prefix CIDR.</p></div>
+            <span class="method">IP AND MASK</span>
+          </div>
+          <form id="subnet-form" novalidate>
+            <div class="form-grid">
+              <div class="field">
+                <label for="subnet-ip">Alamat IPv4</label>
+                <input id="subnet-ip" name="ip" type="text" inputmode="decimal" placeholder="172.16.5.130" autocomplete="off" required aria-describedby="subnet-hint">
+                <p class="hint" id="subnet-hint">Empat oktet, contoh 192.168.1.10</p>
+              </div>
+              <div class="field">
+                <label for="subnet-prefix">Prefix</label>
+                <input id="subnet-prefix" name="prefix" type="number" min="0" max="32" step="1" placeholder="24" required>
+                <p class="hint">Rentang /0 sampai /32</p>
+              </div>
+            </div>
+            <div class="actions"><button class="primary" type="submit"><span class="button-icon" aria-hidden="true">→</span>Hitung subnet</button></div>
+            <p class="error" id="subnet-error" role="alert" hidden></p>
+          </form>
+          <section class="result" id="subnet-result" aria-live="polite" hidden>
+            <h3 class="result-title">Hasil perhitungan</h3>
+            <dl class="result-grid" id="subnet-result-grid"></dl>
+          </section>
+        </section>
+
+        <section class="panel" id="panel-vlsm" role="tabpanel" aria-labelledby="tab-vlsm" hidden>
+          <div class="panel-heading">
+            <div><h2>Alokasi alamat VLSM</h2><p>Kebutuhan terbesar mendapat blok pertama.</p></div>
+            <span class="method">VARIABLE LENGTH</span>
+          </div>
+          <form class="vlsm-form" id="vlsm-form" novalidate>
+            <div class="field">
+              <label for="vlsm-network">Network induk (CIDR)</label>
+              <input id="vlsm-network" name="network" type="text" placeholder="192.168.1.0/24" autocomplete="off" required>
+              <p class="hint">Gunakan alamat network, bukan alamat host.</p>
+            </div>
+            <div class="requirements-heading"><span class="field-label">Kebutuhan host</span></div>
+            <div class="requirements" id="requirements"></div>
+            <button class="text-button add-requirement" id="add-requirement" type="button"><span class="button-icon" aria-hidden="true">+</span> Tambah kebutuhan</button>
+            <div class="actions"><button class="primary" type="submit"><span class="button-icon" aria-hidden="true">→</span>Alokasikan VLSM</button></div>
+            <p class="error" id="vlsm-error" role="alert" hidden></p>
+          </form>
+          <section class="result" id="vlsm-result" aria-live="polite" hidden>
+            <h3 class="result-title">Rencana alokasi</h3>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th scope="col">Kebutuhan</th><th scope="col">Network / Prefix</th><th scope="col">Mask</th><th scope="col">Rentang host</th><th scope="col">Broadcast</th><th scope="col">Host tersedia</th></tr></thead>
+                <tbody id="vlsm-result-body"></tbody>
+              </table>
+            </div>
+            <div class="footnote"><span>Blok diurutkan dari kebutuhan terbesar.</span><span>/31 mengikuti RFC 3021; /32 mewakili satu alamat.</span></div>
+          </section>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const tabs = [...document.querySelectorAll('[role="tab"]')];
+    const panels = [...document.querySelectorAll('[role="tabpanel"]')];
+    let requirementCount = 0;
+
+    function setActiveTab(tab) {
+      tabs.forEach((item) => {
+        const active = item === tab;
+        item.setAttribute('aria-selected', String(active));
+        item.tabIndex = active ? 0 : -1;
+      });
+      panels.forEach((panel) => { panel.hidden = panel.id !== tab.getAttribute('aria-controls'); });
+      document.getElementById('subnet-error').hidden = true;
+      document.getElementById('vlsm-error').hidden = true;
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => setActiveTab(tab));
+      tab.addEventListener('keydown', (event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+        event.preventDefault();
+        const next = tabs[(index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+        setActiveTab(next);
+        next.focus();
+      });
+    });
+
+    function addRequirement() {
+      requirementCount += 1;
+      const row = document.createElement('div');
+      row.className = 'requirement';
+      const field = document.createElement('div');
+      field.className = 'field';
+      const label = document.createElement('label');
+      const input = document.createElement('input');
+      const remove = document.createElement('button');
+      const inputId = `host-requirement-${requirementCount}`;
+      label.htmlFor = inputId;
+      label.textContent = `Kebutuhan ${requirementCount}`;
+      input.id = inputId;
+      input.type = 'number';
+      input.min = '1';
+      input.step = '1';
+      input.max = '4294967294';
+      input.inputMode = 'numeric';
+      input.placeholder = 'Contoh: 50';
+      input.required = true;
+      input.dataset.requirement = 'true';
+      remove.type = 'button';
+      remove.className = 'remove-button';
+      remove.textContent = 'Hapus';
+      remove.setAttribute('aria-label', `Hapus kebutuhan ${requirementCount}`);
+      remove.addEventListener('click', () => { row.remove(); refreshRequirementRows(); });
+      field.append(label, input);
+      row.append(field, remove);
+      document.getElementById('requirements').append(row);
+      refreshRequirementRows();
+      input.focus();
+    }
+
+    function refreshRequirementRows() {
+      const rows = [...document.querySelectorAll('.requirement')];
+      rows.forEach((row, index) => {
+        row.querySelector('label').textContent = `Kebutuhan ${index + 1}`;
+        row.querySelector('label').htmlFor = row.querySelector('input').id;
+        const remove = row.querySelector('button');
+        remove.disabled = rows.length === 1;
+        remove.setAttribute('aria-label', `Hapus kebutuhan ${index + 1}`);
+      });
+    }
+
+    document.getElementById('add-requirement').addEventListener('click', addRequirement);
+    addRequirement();
+
+    function setError(id, message) {
+      const error = document.getElementById(id);
+      error.textContent = message;
+      error.hidden = false;
+    }
+
+    function clearError(id) {
+      const error = document.getElementById(id);
+      error.textContent = '';
+      error.hidden = true;
+    }
+
+    function appendResultItem(container, label, value, emphasis = false) {
+      const item = document.createElement('div');
+      item.className = `result-item${emphasis ? ' emphasis' : ''}`;
+      const term = document.createElement('dt');
+      const description = document.createElement('dd');
+      term.textContent = label;
+      description.textContent = value;
+      item.append(term, description);
+      container.append(item);
+    }
+
+    document.getElementById('subnet-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearError('subnet-error');
+      document.getElementById('subnet-result').hidden = true;
+      const ip = document.getElementById('subnet-ip').value;
+      const prefix = document.getElementById('subnet-prefix').value;
+      try {
+        const query = new URLSearchParams({ ip, prefix });
+        const response = await fetch(`/api/subnet?${query}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || 'Input tidak valid.');
+        const grid = document.getElementById('subnet-result-grid');
+        grid.replaceChildren();
+        const broadcast = data.broadcast ?? (Number(prefix) === 31 ? 'Tidak ada (RFC 3021)' : 'Tidak berlaku (/32)');
+        appendResultItem(grid, 'Subnet mask', data.mask);
+        appendResultItem(grid, 'Network address', data.network, true);
+        appendResultItem(grid, 'Broadcast address', broadcast);
+        appendResultItem(grid, 'Host pertama', data.first_host);
+        appendResultItem(grid, 'Host terakhir', data.last_host);
+        appendResultItem(grid, 'Host tersedia', new Intl.NumberFormat('id-ID').format(data.usable_hosts), true);
+        document.getElementById('subnet-result').hidden = false;
+      } catch (error) {
+        setError('subnet-error', error instanceof Error ? error.message : 'Tidak dapat menghitung subnet.');
+      }
+    });
+
+    document.getElementById('vlsm-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearError('vlsm-error');
+      document.getElementById('vlsm-result').hidden = true;
+      const network = document.getElementById('vlsm-network').value;
+      const kebutuhan_host = [...document.querySelectorAll('[data-requirement]')].map((input) => Number(input.value));
+      try {
+        const response = await fetch('/api/vlsm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ network, kebutuhan_host }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || 'Input tidak valid.');
+        const body = document.getElementById('vlsm-result-body');
+        body.replaceChildren();
+        data.forEach((block) => {
+          const row = document.createElement('tr');
+          const values = [
+            `${block.kebutuhan} host`,
+            block.network_cidr,
+            block.mask,
+            `${block.first_host} - ${block.last_host}`,
+            block.broadcast ?? 'Tidak ada',
+            new Intl.NumberFormat('id-ID').format(block.usable_hosts),
+          ];
+          values.forEach((value, index) => {
+            const cell = document.createElement('td');
+            cell.textContent = value;
+            if (index > 0) cell.className = 'mono';
+            row.append(cell);
+          });
+          body.append(row);
+        });
+        document.getElementById('vlsm-result').hidden = false;
+      } catch (error) {
+        setError('vlsm-error', error instanceof Error ? error.message : 'Tidak dapat mengalokasikan VLSM.');
+      }
+    });
+  </script>
+</body>
+</html>
